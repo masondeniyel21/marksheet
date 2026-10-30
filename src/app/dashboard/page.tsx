@@ -1,3 +1,11 @@
+// import { requireAuth } from "@/lib/auth";
+// import { cookies } from "next/headers";
+// import { redirect } from "next/navigation";
+
+// export const instant = false;
+
+import { Suspense } from "react";
+import DashboardContent from "./DashboardContent";
 
 const stats = [
   { label: "Total revenue", value: "₹12,48,500", change: "+12.8%" },
@@ -7,9 +15,13 @@ const stats = [
 ];
 
 export default function DashboardPage() {
+  // await requireAuth(); 
   return (
     <main className="min-h-screen bg-[#f7f8fc] p-6 text-slate-900 md:p-10">
       <header className="mb-10 flex flex-wrap items-center justify-between gap-4">
+        <Suspense fallback={<div>Loading dashboard...</div>}>
+          <DashboardContent />
+        </Suspense>
         <div>
           <p className="text-sm font-semibold text-violet-600">erp4u</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">

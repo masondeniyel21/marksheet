@@ -2,16 +2,36 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import {
-  loginSchema,
-  type LoginFormValues,
-} from "@/lib/validations/auth";
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+
+const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email address is required.")
+    .email("Please enter a valid email address."),
+  password: z
+    .string()
+    .min(1, "Password is required.")
+    .min(4, "Password must be at least 4 characters."),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginForm() {
+
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(true);
   const [serverMessage, setServerMessage] = useState("");
 
   const {
@@ -21,129 +41,169 @@ export default function LoginForm() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
+    mode: "onBlur",
   });
 
   async function onSubmit(values: LoginFormValues) {
     setServerMessage("");
 
-    // TODO: Send credentials to your authentication API.
-    // Do not authenticate users or create sessions in the browser.
-    // `remember` will be used when session persistence is implemented.
-    void remember;
-    void values;
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(values),
+        },
+      );
 
-    setServerMessage(
-      "Sign-in service is not connected yet. Please try again later."
-    );
+      const result = await response.json();
+
+      if (!response.ok) {
+        setServerMessage(
+          typeof result.message === "string"
+            ? result.message
+            : "Unable to sign in. Check your credentials.",
+        );
+        return;
+      }
+
+      router.replace("/dashboard");
+      router.refresh();
+    } catch {
+      setServerMessage(
+        "Unable to connect to the server. Please try again.",
+      );
+    }
   }
 
   const inputClass =
-    "w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100";
+    "w-full rounded-xl border bg-white py-3.5 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10";
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="space-y-5"
+    >
+      {/* Email */}
       <div>
         <label
-          htmlFor="username"
-          className="mb-2 block text-sm font-medium text-slate-700"
+          htmlFor="email"
+          className="mb-2 block text-sm font-semibold text-slate-700"
         >
-          Email or username
+          Email address
         </label>
 
-        <input
-          id="username"
-          type="text"
-          autoComplete="username"
-          placeholder="you@company.com"
-          aria-invalid={!!errors.username}
-          aria-describedby={
-            errors.username ? "username-error" : undefined
-          }
-          className={`${inputClass} ${
-            errors.username ? "border-red-400 focus:ring-red-100" : ""
-          }`}
-          {...register("username")}
-        />
+        <div className="relative">
+          <Mail
+            size={18}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+          />
 
-        {errors.username && (
-          <p id="username-error" role="alert" className="mt-2 text-xs text-red-600">
-            {errors.username.message}
+          <input
+            id="email"
+            type="email"
+            autoComplete="username"
+            placeholder="you@school.edu"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "email-error" : undefined}
+            {...register("email")}
+            className={`${inputClass} ${errors.email
+              ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+              : "border-slate-200"
+              }`}
+          />
+        </div>
+
+        {errors.email && (
+          <p
+            id="email-error"
+            role="alert"
+            className="mt-2 text-xs font-medium text-red-600"
+          >
+            {errors.email.message}
           </p>
         )}
       </div>
 
+      {/* Password */}
       <div>
         <div className="mb-2 flex items-center justify-between gap-3">
           <label
             htmlFor="password"
-            className="text-sm font-medium text-slate-700"
+            className="block text-sm font-semibold text-slate-700"
           >
             Password
           </label>
 
-          <button
-            type="button"
-            onClick={() => {
-              setServerMessage(
-                "Password reset will be available after authentication is connected."
-              );
-            }}
-            className="text-xs font-semibold text-violet-600 hover:text-violet-800"
-          >
-            Forgot password?
-          </button>
+          {/* Add a real password-reset route when available. */}
+          <span className="text-xs text-slate-400">
+            Authorized staff
+          </span>
         </div>
 
         <div className="relative">
+          <LockKeyhole
+            size={18}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
           <input
             id="password"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             placeholder="Enter your password"
-            aria-invalid={!!errors.password}
+            aria-invalid={Boolean(errors.password)}
             aria-describedby={
               errors.password ? "password-error" : undefined
             }
-            className={`${inputClass} pr-16 ${
-              errors.password ? "border-red-400 focus:ring-red-100" : ""
-            }`}
             {...register("password")}
+            className={`${inputClass} pr-12 ${errors.password
+              ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+              : "border-slate-200"
+              }`}
           />
 
           <button
             type="button"
-            onClick={() => setShowPassword((value) => !value)}
+            onClick={() => setShowPassword((previous) => !previous)}
             aria-label={showPassword ? "Hide password" : "Show password"}
-            className="absolute inset-y-0 right-4 text-xs font-semibold text-slate-500 hover:text-violet-600"
+            aria-pressed={showPassword}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           >
-            {showPassword ? "Hide" : "Show"}
+            {showPassword ? (
+              <EyeOff size={18} />
+            ) : (
+              <Eye size={18} />
+            )}
           </button>
         </div>
 
         {errors.password && (
-          <p id="password-error" role="alert" className="mt-2 text-xs text-red-600">
+          <p
+            id="password-error"
+            role="alert"
+            className="mt-2 text-xs font-medium text-red-600"
+          >
             {errors.password.message}
           </p>
         )}
       </div>
 
-      <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-600">
-        <input
-          type="checkbox"
-          checked={remember}
-          onChange={(event) => setRemember(event.target.checked)}
-          className="size-4 rounded border-slate-300 accent-violet-600"
-        />
-        Remember me
-      </label>
-
+      {/* Submission feedback */}
       {serverMessage && (
         <p
           role="status"
-          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800"
+          className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-5 text-amber-800"
         >
           {serverMessage}
         </p>
@@ -152,19 +212,20 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#5b4bdb] to-[#7963e9] px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-200/70 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#101c35] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-[#1b2c4b] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? "Signing in..." : "Sign in to erp4u"}
-        {!isSubmitting && (
-          <span className="transition-transform group-hover:translate-x-1">
-            →
-          </span>
+        {isSubmitting ? (
+          <>
+            <LoaderCircle size={18} className="animate-spin" />
+            Signing in...
+          </>
+        ) : (
+          <>
+            Sign in to your account
+            <LockKeyhole size={17} />
+          </>
         )}
       </button>
-
-      <p className="text-center text-xs leading-5 text-slate-400">
-        Your business workspace, thoughtfully organized.
-      </p>
     </form>
   );
 }
